@@ -237,6 +237,7 @@ class ILQR():
 
 		def forward_pass(self, init_state, cost, controls, big_Kt, little_kt, path_refs, obs_refs):
 			alpha = 0.5
+			epsilon = 0.5
 			while alpha > 0.1:
 				X = np.zeros_like(init_state)
 				U = np.zeros_like(controls)
@@ -252,21 +253,9 @@ class ILQR():
 				if J < cost:
 					break
 				else:
+					alpha = alpha * epsilon
+			return X, U, J
 					
-		
-			
-
-
-
-
-
-
-
-			 
-
-
-
-			pass
 
 		def backward_pass(self, trajectory,
 				controls, curr_state, path_refs, obs_refs):

@@ -179,6 +179,7 @@ class ILQR():
     	steps = self.max_attempt
 		X = trajectory
 		U = controls
+		
 
 
     #initial step
@@ -186,28 +187,31 @@ class ILQR():
 
     	converged = False
     	for i in range(steps):
-        	alpha = 1
+        	# alpha = 1
         	K_closed_loop, k_open_loop, reg = self.backward_pass(X,U, reg)
-			X, U, J = forward_pass(X, J, U, K_closed_loop, k_open_loop)
         	changed = False
         	for alpha in self.alphas :
-            X_new, U_new = roll_out(X, U, K_closed_loop, k_open_loop, alpha, dt)
-            J_new, _ = calculate_cost(X_new, U_new, target, SigmaX, SigmaY)
-            # 	if J_new<=J:
-            #     	if np.abs(J - J_new) < 1e-3:
-            #         	converged = True   
-            #     	J = J_new
-            #     	X = X_new
-            #     	U = U_new
-            #     	changed = True
-            #     	break
-            #	alpha *= 0.1
+            	X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop)
+            # J_new= self.get_traj_cost(X_new, U_new, )
+				path_refs, obs_refs = self.get_references(X)
+				J_new = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
+             	if J_new<=J:
+                 	if np.abs(J - J_new) < 1e-3:
+                    	converged = True   
+                 	J = J_new
+                 	X = X_new
+                 	U = U_new
+                 	changed = True
+                 	break
         	if not changed:
           		print("line search failed with reg = ", reg, " at step ", i)
           		break
         	if converged:
          		print("converged after ", i, " steps.")
           		break
+		
+		trajectory = X
+		controls = U
 
 
 		
@@ -276,11 +280,11 @@ class ILQR():
 				t_process=t_process, # Time spent on planning
 				trajectory = trajectory,
 				controls = controls,
-				status=None, #	TODO: Fill this in
-				K_closed_loop=None, # TODO: Fill this in
-				k_open_loop=None # TODO: Fill this in
+				status=changed, #	TODO: Fill this in
+				K_closed_loop= K_closed_loop, # TODO: Fill this in
+				k_open_loop= k_open_loop # TODO: Fill this in
 				# Optional TODO: Fill in other information you want to return
-		)
+		) 
 		return solver_info
 
 

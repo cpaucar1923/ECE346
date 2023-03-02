@@ -175,8 +175,10 @@ class ILQR():
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
 		# You will find following implemented functions useful:
 		
-		reg = 1
-    	steps = self.max_iter
+		reg = self.reg_init
+    	steps = self.max_attempt
+		X = trajectory
+		U = controls
 
 
     #initial step
@@ -185,20 +187,21 @@ class ILQR():
     	converged = False
     	for i in range(steps):
         	alpha = 1
-        	K_closed_loop, k_open_loop, reg = backward_pass(X, U, target, dt, SigmaX, SigmaY, reg)
+        	K_closed_loop, k_open_loop, reg = self.backward_pass(X,U, reg)
+			X, U, J = forward_pass(X, J, U, K_closed_loop, k_open_loop)
         	changed = False
-        	for _ in range(3) :
-            	X_new, U_new = roll_out(X, U, K_closed_loop, k_open_loop, alpha, dt)
-            	J_new, _ = calculate_cost(X_new, U_new, target, SigmaX, SigmaY)
-            	if J_new<=J:
-                	if np.abs(J - J_new) < 1e-3:
-                    	converged = True   
-                	J = J_new
-                	X = X_new
-                	U = U_new
-                	changed = True
-                	break
-            	alpha *= 0.1
+        	for alpha in self.alphas :
+            X_new, U_new = roll_out(X, U, K_closed_loop, k_open_loop, alpha, dt)
+            J_new, _ = calculate_cost(X_new, U_new, target, SigmaX, SigmaY)
+            # 	if J_new<=J:
+            #     	if np.abs(J - J_new) < 1e-3:
+            #         	converged = True   
+            #     	J = J_new
+            #     	X = X_new
+            #     	U = U_new
+            #     	changed = True
+            #     	break
+            #	alpha *= 0.1
         	if not changed:
           		print("line search failed with reg = ", reg, " at step ", i)
           		break
@@ -282,26 +285,25 @@ class ILQR():
 
 
 
-	def forward_pass(self, init_state, cost, controls, big_Kt, little_kt):
+	def roll_out(self, init_state, cost, controls, big_Kt, little_kt):
 		# epsilon = 0.5
-		for alpha in alphas:
-			X = np.zeros_like(init_state)
-			U = np.zeros_like(controls)
+		# for alpha in alphas:
+		X = np.zeros_like(init_state)
+		U = np.zeros_like(controls)
 
-			X[:,0] = init_state[:,0]
-			T = init_state[1]
-			for t in range(T-1):
-				K = big_Kt[:,:,t]
-				k = little_kt[:,t]
-				U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
-				X[:,t+1], U[:, t] = self.dyn.integrate_forward_np(X[:,t], U[:,t])
-			path_refs, obs_refs = self.get_references(X)
-			J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
-			if J < cost:
-				break
-			# else:
-			#	alpha = alpha * epsilon
-		return X, U, J
+		X[:,0] = init_state[:,0]
+		T = init_state[1]
+		for t in range(T-1):
+			K = big_Kt[:,:,t]
+			k = little_kt[:,t]
+			U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
+			X[:,t+1], U[:, t] = self.dyn.integrate_forward_np(X[:,t], U[:,t])
+		return X, U
+			# path_refs, obs_refs = self.get_references(X)
+			# J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
+			# if J < cost:
+			# 	break
+		# return X, U, J, path_refs, obs_refs
 					
 
 	def backward_pass(self, X,U, reg):
@@ -351,6 +353,6 @@ class ILQR():
         	P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
         	t -= 1
 
-		reg = max(self.config.reg_min, reg*0.5)
+		reg = max(self.reg_min, reg*0.5)
     	return K_closed_loop, k_open_loop, reg
 			

@@ -237,36 +237,61 @@ class ILQR():
 		
 		########################### #END of TODO 1 #####################################
 
-		def forward_pass(self, init_state, cost, controls, big_Kt, little_kt, path_refs, obs_refs):
-			alpha = 0.5
-			epsilon = 0.5
-			while alpha > 0.1:
-				X = np.zeros_like(init_state)
-				U = np.zeros_like(controls)
+	def forward_pass(self, init_state, cost, controls, big_Kt, little_kt, path_refs, obs_refs):
+		alpha = 0.5
+		epsilon = 0.5
+		while alpha > 0.1:
+			X = np.zeros_like(init_state)
+			U = np.zeros_like(controls)
 
-				X[:,0] = init_state[:,0]
-				T = init_state[1]
-				for t in range(T-1):
-					K = big_Kt[:,:,t]
-					k = little_kt[:,t]
-					U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
-					X[:,t+1] = integrate_forward_np(X[:,t], U[:,t])
-				J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
-				if J < cost:
-					break
-				else:
-					alpha = alpha * epsilon
-			return X, U, J
+			X[:,0] = init_state[:,0]
+			T = init_state[1]
+			for t in range(T-1):
+				K = big_Kt[:,:,t]
+				k = little_kt[:,t]
+				U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
+				X[:,t+1] = integrate_forward_np(X[:,t], U[:,t])
+			J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
+			if J < cost:
+				break
+			else:
+				alpha = alpha * epsilon
+		return X, U, J
 					
 
-		def backward_pass(self, trajectory,
-				controls, curr_state, path_refs, obs_refs):
+	def backward_pass(self, X,U, reg):
+		q, r, Q, R, H = self.get_derivatives_np(X, U, path_refs, obs_refs)
+		A, B = self.dyn.get_jacobian_np(X,U)
+		T = X.shape[1]
+		k_open_loop = np.zeros()
+		K_closed_loop = np.zeros()
 
-			
-			q, r, Q, R, H = self.get_derivatives_np(trajectory, controls, path_refs, obs_refs)
-			A, B = self.dyn.get_jacobian_np(curr_state, controls)
-			T = curr_state.shape[1]
-			k_open_loop = 
+		# 2. Initialize pT = qT and PT = QT
+		p = q[:,T-1]
+		P = Q[:,T-1]
+
+		# 3. t = T-1
+		t = T-2
+
+		# 4. while t ≥ 0
+		while t >=0:
+			# 5. Already done above??
+
+			# 6. Done below
+			Q_x = q[:,t] + A[:,:,t].T @ p
+        	Q_u = r[:,t] + B[:,:,t].T @ p
+        	Q_xx = Q[:,:,t] + A[:,:,t].T @ P @ A[:,:,t] 
+        	Q_uu = R[:,:,t] + B[:,:,t].T @ P @ B[:,:,t]
+        	Q_ux = H[:,:,t] + B[:,:,t].T @ P @ A[:,:,t]
+
+			# 7. Compute regulatrized Hessian
+			reg_matrix = reg*np.eye(4)
+        	Q_uu_reg = R[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ B[:,:,t]
+        	Q_ux_reg = H[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ A[:,:,t]
+
+
+
+
 
 
 

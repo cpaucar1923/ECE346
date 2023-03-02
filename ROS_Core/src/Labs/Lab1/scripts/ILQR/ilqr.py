@@ -263,8 +263,8 @@ class ILQR():
 		q, r, Q, R, H = self.get_derivatives_np(X, U, path_refs, obs_refs)
 		A, B = self.dyn.get_jacobian_np(X,U)
 		T = X.shape[1]
-		k_open_loop = np.zeros()
-		K_closed_loop = np.zeros()
+		k_open_loop = np.zeros((2,T))
+		K_closed_loop = np.zeros((2,5,T))
 
 		# 2. Initialize pT = qT and PT = QT
 		p = q[:,T-1]
@@ -289,15 +289,26 @@ class ILQR():
         	Q_uu_reg = R[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ B[:,:,t]
         	Q_ux_reg = H[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ A[:,:,t]
 
+			# 8. If Q_uu NOT positive definite
+			if not np.all(np.linalg.eigvals(Q_uu_reg) > 0) and reg < 1e5:
+				reg *= 5
+				t = T-2
+				continue
+			# 13. Compute optimal control gain
+			Q_uu_reg_inv = np.linalg.inv(Q_uu_reg)
+        	# Calculate policy
+        	k = -Q_uu_reg_inv@Q_u
+        	K = -Q_uu_reg_inv@Q_ux_reg
+        	k_open_loop[:,t] = k          
+        	K_closed_loop[:, :, t] = K
 
+			# Computing derivative and Hessian of V_t
+        	p = Q_x + K.T @ Q_uu @ k + K.T@Q_u + Q_ux.T@k
+        	P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
+        	t -= 1
 
-
-
-
-
-			
-			pass
-		
+	reg = max(1e-5, reg*0.5)
+    return K_closed_loop, k_open_loop, reg
 			
 		
 		t_process = time.time() - t_start

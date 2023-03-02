@@ -235,7 +235,36 @@ class ILQR():
 		
 		########################### #END of TODO 1 #####################################
 
-		def forward_pass():
+		def forward_pass(self, init_state, cost, controls, big_Kt, little_kt, path_refs, obs_refs):
+			alpha = 0.5
+			while alpha > 0.1:
+				X = np.zeros_like(init_state)
+				U = np.zeros_like(controls)
+
+				X[:,0] = curr_state[:,0]
+				T = curr_state[1]
+				for t in range(T-1):
+					K = big_Kt[:,:,t]
+					k = little_kt[:,t]
+					U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
+					X[:,t+1] = f(X[:,t], U[])
+				J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
+				if J < cost:
+					break
+				else:
+					
+		
+			
+
+
+
+
+
+
+
+			 
+
+
 
 			pass
 

@@ -250,7 +250,7 @@ class ILQR():
 					K = big_Kt[:,:,t]
 					k = little_kt[:,t]
 					U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
-					X[:,t+1] = integrate_forward_np(X[,:t], )
+					X[:,t+1] = integrate_forward_np(X[:,t], U[:,t])
 				J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
 				if J < cost:
 					break

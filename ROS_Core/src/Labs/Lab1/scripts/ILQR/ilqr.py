@@ -174,6 +174,9 @@ class ILQR():
 		##########################################################################
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
 		# You will find following implemented functions useful:
+		
+		
+
 
 		# ******** Functions to compute the Jacobians of the dynamics  ************
 		# A, B = self.dyn.get_jacobian_np(trajectory, controls)
@@ -232,6 +235,26 @@ class ILQR():
 		
 		########################### #END of TODO 1 #####################################
 
+		def forward_pass():
+
+			pass
+
+		def backward_pass(self, trajectory,
+				controls, curr_state, path_refs, obs_refs):
+
+			
+			q, r, Q, R, H = self.get_derivatives_np(trajectory, controls, path_refs, obs_refs)
+			A, B = self.dyn.get_jacobian_np(curr_state, controls)
+			T = curr_state.shape[1]
+			k_open_loop = 
+
+
+
+			
+			pass
+		
+			
+		
 		t_process = time.time() - t_start
 		solver_info = dict(
 				t_process=t_process, # Time spent on planning

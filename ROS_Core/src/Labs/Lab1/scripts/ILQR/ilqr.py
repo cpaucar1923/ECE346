@@ -175,48 +175,6 @@ class ILQR():
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
 		# You will find following implemented functions useful:
 		
-		reg = self.reg_init
-    	steps = self.max_attempt
-		X = trajectory
-		U = controls
-		
-
-
-    #initial step
-    	
-
-    	converged = False
-    	for i in range(steps):
-        	# alpha = 1
-        	K_closed_loop, k_open_loop, reg = self.backward_pass(X,U, reg)
-        	changed = False
-        	for alpha in self.alphas :
-            	X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop, alpha)
-            # J_new= self.get_traj_cost(X_new, U_new, )
-				path_refs, obs_refs = self.get_references(X)
-				J_new = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
-             	if J_new <= J:
-                 	if np.abs(J - J_new) < self.tol:
-                    	converged = True   
-                 	J = J_new
-                 	X = X_new
-                 	U = U_new
-                 	changed = True
-                 	break
-        	if not changed:
-          		print("line search failed with reg = ", reg, " at step ", i)
-          		break
-        	if converged:
-         		print("converged after ", i, " steps.")
-          		break
-		
-		trajectory = X
-		controls = U
-
-
-		
-
-
 		# ******** Functions to compute the Jacobians of the dynamics  ************
 		# A, B = self.dyn.get_jacobian_np(trajectory, controls)
 
@@ -273,6 +231,36 @@ class ILQR():
         #   H: np.ndarray, (dim_x, dim_u, T) hessian of cost function w.r.t. states and controls
 		
 		########################### #END of TODO 1 #####################################
+		reg = self.reg_init
+		steps = self.max_attempt
+		X = trajectory
+		U = controls
+		converged = False
+		for i in range(steps):
+			K_closed_loop, k_open_loop, reg = self.backward_pass(X,U, reg)
+			changed = False
+			for alpha in self.alphas:
+            	X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop, alpha)
+            # J_new= self.get_traj_cost(X_new, U_new, )
+				path_refs, obs_refs = self.get_references(X)
+				J_new = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
+            	if J_new <= J:
+                	if np.abs(J - J_new) < self.tol:
+                    	converged = True   
+                	J = J_new
+                	X = X_new
+                	U = U_new
+                	changed = True
+                	break
+        	if not changed:
+          		print("line search failed with reg = ", reg, " at step ", i)
+          		break
+        	if converged:
+         		print("converged after ", i, " steps.")
+          		break
+		
+		trajectory = X
+		controls = U
 
 		
 		t_process = time.time() - t_start

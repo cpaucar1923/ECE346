@@ -175,6 +175,8 @@ class ILQR():
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
 		# You will find following implemented functions useful:
 		
+		X = init_state
+		U = controls
 		
 
 
@@ -242,13 +244,13 @@ class ILQR():
 				X = np.zeros_like(init_state)
 				U = np.zeros_like(controls)
 
-				X[:,0] = curr_state[:,0]
-				T = curr_state[1]
+				X[:,0] = init_state[:,0]
+				T = init_state[1]
 				for t in range(T-1):
 					K = big_Kt[:,:,t]
 					k = little_kt[:,t]
 					U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
-					X[:,t+1] = f(X[:,t], U[])
+					X[:,t+1] = integrate_forward_np(X[,:t], )
 				J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
 				if J < cost:
 					break

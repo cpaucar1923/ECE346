@@ -175,8 +175,38 @@ class ILQR():
 		# TODO 1: Implement the ILQR algorithm. Feel free to add any helper functions.
 		# You will find following implemented functions useful:
 		
-		X = init_state
-		U = controls
+		reg = 1
+    	steps = self.max_iter
+
+
+    #initial step
+    	
+
+    	converged = False
+    	for i in range(steps):
+        	alpha = 1
+        	K_closed_loop, k_open_loop, reg = backward_pass(X, U, target, dt, SigmaX, SigmaY, reg)
+        	changed = False
+        	for _ in range(3) :
+            	X_new, U_new = roll_out(X, U, K_closed_loop, k_open_loop, alpha, dt)
+            	J_new, _ = calculate_cost(X_new, U_new, target, SigmaX, SigmaY)
+            	if J_new<=J:
+                	if np.abs(J - J_new) < 1e-3:
+                    	converged = True   
+                	J = J_new
+                	X = X_new
+                	U = U_new
+                	changed = True
+                	break
+            	alpha *= 0.1
+        	if not changed:
+          		print("line search failed with reg = ", reg, " at step ", i)
+          		break
+        	if converged:
+         		print("converged after ", i, " steps.")
+          		break
+
+
 		
 
 
@@ -237,10 +267,24 @@ class ILQR():
 		
 		########################### #END of TODO 1 #####################################
 
-	def forward_pass(self, init_state, cost, controls, big_Kt, little_kt, path_refs, obs_refs):
-		alpha = 0.5
-		epsilon = 0.5
-		while alpha > 0.1:
+		
+		t_process = time.time() - t_start
+		solver_info = dict(
+				t_process=t_process, # Time spent on planning
+				trajectory = trajectory,
+				controls = controls,
+				status=None, #	TODO: Fill this in
+				K_closed_loop=None, # TODO: Fill this in
+				k_open_loop=None # TODO: Fill this in
+				# Optional TODO: Fill in other information you want to return
+		)
+		return solver_info
+
+
+
+	def forward_pass(self, init_state, cost, controls, big_Kt, little_kt):
+		# epsilon = 0.5
+		for alpha in alphas:
 			X = np.zeros_like(init_state)
 			U = np.zeros_like(controls)
 
@@ -250,12 +294,13 @@ class ILQR():
 				K = big_Kt[:,:,t]
 				k = little_kt[:,t]
 				U[:,t] = controls[:,t] + alpha*k + K @ (X[:,t] - init_state[:,t])
-				X[:,t+1] = integrate_forward_np(X[:,t], U[:,t])
+				X[:,t+1], U[:, t] = self.dyn.integrate_forward_np(X[:,t], U[:,t])
+			path_refs, obs_refs = self.get_references(X)
 			J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
 			if J < cost:
 				break
-			else:
-				alpha = alpha * epsilon
+			# else:
+			#	alpha = alpha * epsilon
 		return X, U, J
 					
 
@@ -275,8 +320,7 @@ class ILQR():
 
 		# 4. while t ≥ 0
 		while t >=0:
-			# 5. Already done above??
-
+			
 			# 6. Done below
 			Q_x = q[:,t] + A[:,:,t].T @ p
         	Q_u = r[:,t] + B[:,:,t].T @ p
@@ -307,21 +351,6 @@ class ILQR():
         	P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
         	t -= 1
 
-	reg = max(1e-5, reg*0.5)
-    return K_closed_loop, k_open_loop, reg
+		reg = max(self.config.reg_min, reg*0.5)
+    	return K_closed_loop, k_open_loop, reg
 			
-		
-		t_process = time.time() - t_start
-		solver_info = dict(
-				t_process=t_process, # Time spent on planning
-				trajectory = trajectory,
-				controls = controls,
-				status=None, #	TODO: Fill this in
-				K_closed_loop=None, # TODO: Fill this in
-				k_open_loop=None # TODO: Fill this in
-				# Optional TODO: Fill in other information you want to return
-		)
-		return solver_info
-
-
-

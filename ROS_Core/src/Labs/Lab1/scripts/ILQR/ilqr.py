@@ -191,12 +191,12 @@ class ILQR():
         	K_closed_loop, k_open_loop, reg = self.backward_pass(X,U, reg)
         	changed = False
         	for alpha in self.alphas :
-            	X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop)
+            	X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop, alpha)
             # J_new= self.get_traj_cost(X_new, U_new, )
 				path_refs, obs_refs = self.get_references(X)
 				J_new = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
-             	if J_new<=J:
-                 	if np.abs(J - J_new) < 1e-3:
+             	if J_new <= J:
+                 	if np.abs(J - J_new) < self.tol:
                     	converged = True   
                  	J = J_new
                  	X = X_new
@@ -289,14 +289,14 @@ class ILQR():
 
 
 
-	def roll_out(self, init_state, cost, controls, big_Kt, little_kt):
+	def roll_out(self, init_state, cost, controls, big_Kt, little_kt, alpha):
 		# epsilon = 0.5
 		# for alpha in alphas:
 		X = np.zeros_like(init_state)
 		U = np.zeros_like(controls)
 
 		X[:,0] = init_state[:,0]
-		T = init_state[1]
+		T = init_state.shape[1]
 		for t in range(T-1):
 			K = big_Kt[:,:,t]
 			k = little_kt[:,t]
@@ -335,20 +335,20 @@ class ILQR():
         	Q_ux = H[:,:,t] + B[:,:,t].T @ P @ A[:,:,t]
 
 			# 7. Compute regulatrized Hessian
-			reg_matrix = reg*np.eye(4)
+			reg_matrix = reg*np.eye(5)
         	Q_uu_reg = R[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ B[:,:,t]
         	Q_ux_reg = H[:,:,t] + B[:,:,t].T @ (P+reg_matrix) @ A[:,:,t]
 
 			# 8. If Q_uu NOT positive definite
 			if not np.all(np.linalg.eigvals(Q_uu_reg) > 0) and reg < 1e5:
-				reg *= 5
+				reg *= self.reg_scale_up
 				t = T-2
 				continue
 			# 13. Compute optimal control gain
 			Q_uu_reg_inv = np.linalg.inv(Q_uu_reg)
         	# Calculate policy
-        	k = -Q_uu_reg_inv@Q_u
-        	K = -Q_uu_reg_inv@Q_ux_reg
+        	k = -Q_uu_reg_inv @ Q_u
+        	K = -Q_uu_reg_inv @ Q_ux_reg
         	k_open_loop[:,t] = k          
         	K_closed_loop[:, :, t] = K
 
@@ -357,6 +357,6 @@ class ILQR():
         	P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
         	t -= 1
 
-		reg = max(self.reg_min, reg*0.5)
+		reg = max(self.reg_min, reg/self.reg_scale_down)
     	return K_closed_loop, k_open_loop, reg
 			

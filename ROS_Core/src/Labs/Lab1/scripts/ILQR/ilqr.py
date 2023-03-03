@@ -253,12 +253,13 @@ class ILQR():
 					X = X_new
 					U = U_new
 					changed = True
-				break
+					break
 			if not changed:
 				print("line search failed with reg = ", reg, " at step ", i)
 				break
 			if converged:
 				print("converged after ", i, " steps. ")
+				break
 		trajectory = X
 		controls = U
 		t_process = time.time() - t_start

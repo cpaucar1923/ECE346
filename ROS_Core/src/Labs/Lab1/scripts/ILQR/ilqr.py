@@ -240,7 +240,7 @@ class ILQR():
 		U = controls
 		converged = False
 		for i in range(steps):
-			K_closed_loop, k_open_loop, reg = self.backward_pass(X, U, reg)
+			K_closed_loop, k_open_loop, reg = self.backward_pass(X, U, reg, path_refs, obs_refs)
 			changed = False
 			for alpha in self.alphas:
 				X_new, U_new = self.roll_out(X, J, U, K_closed_loop, k_open_loop, alpha)
@@ -295,15 +295,16 @@ class ILQR():
 		# return X, U, J, path_refs, obs_refs
 
 	def backward_pass(self, X, U, reg, path_refs, obs_refs):
-		q, r, Q, R, H = self.get_derivatives_np(X, U, path_refs, obs_refs)
+		q, r, Q, R, H = self.cost.get_derivatives_np(X, U, path_refs, obs_refs)
 		A, B = self.dyn.get_jacobian_np(X, U)
 		T = X.shape[1]
-		k_open_loop = np.zeros((2, T))
-		K_closed_loop = np.zeros((2, 5, T))
+		print(T)
+		k_open_loop = np.zeros((self.dim_u, T))
+		K_closed_loop = np.zeros((self.dim_u, self.dim_x, T))
 
 		# 2. Initialize pT = qT and PT = QT
 		p = q[:, T-1]
-		P = Q[:, T-1]
+		P = Q[:,:, T-1]
 
 		# 3. t = T-1
 		t = T-2

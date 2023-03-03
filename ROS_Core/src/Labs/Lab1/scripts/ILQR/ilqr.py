@@ -235,6 +235,7 @@ class ILQR():
 
 		########################### #END of TODO 1 #####################################
 		reg = self.reg_init
+		status = -1
 		steps = self.max_attempt
 		X = trajectory
 		U = controls
@@ -249,6 +250,7 @@ class ILQR():
 				if J_new <= J:
 					if np.abs(J - J_new) < self.tol:
 						converged = True
+						status = 0	
 					J = J_new
 					X = X_new
 					U = U_new
@@ -267,7 +269,7 @@ class ILQR():
 			t_process=t_process,  # Time spent on planning
 			trajectory=trajectory,
 			controls=controls,
-			status=changed,  # TODO: Fill this in
+			status = status,  # TODO: Fill this in
 			K_closed_loop=K_closed_loop,  # TODO: Fill this in
 			k_open_loop=k_open_loop  # TODO: Fill this in
 			# Optional TODO: Fill in other information you want to return
@@ -279,15 +281,15 @@ class ILQR():
 		# for alpha in alphas:
 		X = np.zeros_like(init_state)
 		U = np.zeros_like(controls)
+
 		X[:, 0] = init_state[:, 0]
 		T = init_state.shape[1]
+
 		for t in range(T-1):
 			K = big_Kt[:, :, t]
 			k = little_kt[:, t]
-			U[:, t] = controls[:, t] + alpha*k + \
-				K @ (X[:, t] - init_state[:, t])
-			X[:, t+1], U[:,
-				t] = self.dyn.integrate_forward_np(X[:, t], U[:, t])
+			U[:, t] = controls[:, t] + alpha*k + K @ (X[:, t] - init_state[:, t])
+			X[:, t+1], U[:,t] = self.dyn.integrate_forward_np(X[:, t], U[:, t])
 		return X, U
 		   # path_refs, obs_refs = self.get_references(X)
 		   # J = self.cost.get_traj_cost(X, U, path_refs, obs_refs)
@@ -299,43 +301,45 @@ class ILQR():
 		q, r, Q, R, H = self.cost.get_derivatives_np(X, U, path_refs, obs_refs)
 		A, B = self.dyn.get_jacobian_np(X, U)
 		T = X.shape[1]
-		print(T)
+		
 		k_open_loop = np.zeros((self.dim_u, T))
 		K_closed_loop = np.zeros((self.dim_u, self.dim_x, T))
 
 		# 2. Initialize pT = qT and PT = QT
 		p = q[:, T-1]
 		P = Q[:,:, T-1]
-
 		# 3. t = T-1
-		t = T-2
+		# t = T-2
+		t = T-1
 
 		# 4. while t ≥ 0
 		while t >= 0:
-			Q_x = q[:, t] + A[:, :, t].T @ p
-			Q_u = r[:, t] + B[:, :, t].T @ p
-			Q_xx = Q[:, :, t] + A[:, :, t].T @ P @ A[:, :, t]
-			Q_uu = R[:, :, t] + B[:, :, t].T @ P @ B[:, :, t]
-			Q_ux = H[:, :, t] + B[:, :, t].T @ P @ A[:, :, t]
+			Q_x = q[:, t-1] + A[:, :, t-1].T @ p
+			Q_u = r[:, t-1] + B[:, :, t-1].T @ p
+			Q_xx = Q[:, :, t-1] + A[:, :, t-1].T @ P @ A[:, :, t-1]
+			Q_uu = R[:, :, t-1] + B[:, :, t-1].T @ P @ B[:, :, t-1]
+			Q_ux = H[:, :, t-1] + B[:, :, t-1].T @ P @ A[:, :, t-1]
 		   # 7. Compute regulatrized Hessian
 			reg_matrix = reg*np.eye(5)
-			Q_uu_reg = R[:, :, t] + B[:, :, t].T @ (P+reg_matrix) @ B[:, :, t]
-			Q_ux_reg = H[:, :, t] + B[:, :, t].T @ (P+reg_matrix) @ A[:, :, t]
+			Q_uu_reg = R[:, :, t-1] + B[:, :, t-1].T @ (P+reg_matrix) @ B[:, :, t-1]
+			Q_ux_reg = H[:, :, t-1] + B[:, :, t-1].T @ (P+reg_matrix) @ A[:, :, t-1]
 		   # 8. If Q_uu NOT positive definite
-			if (not np.all(np.linalg.eigvals(Q_uu_reg) > 0) and reg < 1e5):
+			if not np.all(np.linalg.eigvals(Q_uu_reg) > 0) and reg < self.reg_max:
 				reg *= self.reg_scale_up
-				t = T-2
+				t = T-1
+				p = q[:,T-1]
+				P = Q[:,:,T-1]
 				continue
 
 			Q_uu_reg_inv = np.linalg.inv(Q_uu_reg)
 			k = -Q_uu_reg_inv @ Q_u
 			K = -Q_uu_reg_inv @ Q_ux_reg
-			k_open_loop[:, t] = k          
-			K_closed_loop[:, :, t] = K
+			k_open_loop[:, t-1] = k          
+			K_closed_loop[:, :, t-1] = K
 
 		   # Computing derivative and Hessian of V_t
-			p = Q_x + K.T @ Q_uu @ k + K.T@Q_u + Q_ux.T@k
-			P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T@K
+			p = Q_x + K.T @ Q_uu @ k + K.T @ Q_u + Q_ux.T @ k
+			P = Q_xx + K.T @ Q_uu @ K + K.T@Q_ux + Q_ux.T @ K
 			t -= 1
 
 		reg = max(self.reg_min, reg/self.reg_scale_down)

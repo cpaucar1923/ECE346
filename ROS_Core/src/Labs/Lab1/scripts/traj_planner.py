@@ -210,9 +210,11 @@ class TrajectoryPlanner():
         ###############################
         # Implement your control law here using ILQR policy
         # Hint: make sure that the difference in heading is between [-pi, pi]
-        
-        accel = 0 # TO BE REPLACED
-        steer_rate = 0 # TO BE REPLACED
+		U = np.zeros_like(u_ref)
+		U = u_ref + K_closed_loop @ (x - x_ref)
+
+        accel = U[:,0] # TO BE REPLACED
+        steer_rate = U[:,1] # TO BE REPLACED
 
         ##### END OF TODO ##############
 
@@ -441,6 +443,7 @@ class TrajectoryPlanner():
                 - Publish the new policy for RVIZ visualization
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
+            
             ###############################
             #### END OF TODO #############
             ###############################

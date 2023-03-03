@@ -288,7 +288,9 @@ class ILQR():
 		for t in range(T-1):
 			K = big_Kt[:, :, t]
 			k = little_kt[:, t]
-			U[:, t] = controls[:, t] + alpha*k + K @ (X[:, t] - init_state[:, t])
+			dx = X[:, t] - init_state[:, t]
+			dx[3] = np.arctan2(np.sin(dx[3]), np.cos(dx[3]))
+			U[:, t] = controls[:, t] + alpha*k + K @ (dx)
 			X[:, t+1], U[:,t] = self.dyn.integrate_forward_np(X[:, t], U[:, t])
 		return X, U
 		   # path_refs, obs_refs = self.get_references(X)

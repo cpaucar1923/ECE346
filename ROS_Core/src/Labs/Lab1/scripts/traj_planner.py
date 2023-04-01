@@ -199,7 +199,6 @@ class TrajectoryPlanner():
             x_ref: np.ndarray, [dim_x] reference trajectory
             u_ref: np.ndarray, [dim_u] reference control command
             K_closed_loop: np.ndarray, [dim_u, dim_x] closed loop gain
-
         Returns:
             accel: float, acceleration command [m/s^2]
             steer_rate: float, steering rate command [rad/s]
@@ -422,6 +421,46 @@ class TrajectoryPlanner():
             ###############################
             #### TODO: Task 3 #############
             ###############################
+            
+            # take current time and subtract from last replan time
+           
+            # Step 1
+            if self.plan_state_buffer.new_data_available and self.planner_ready:
+                
+                # Get current state from plan_state_buffer
+                state = self.plan_state_buffer.readFromRT()
+                
+                curr_time = state[-1]
+                dt = curr_time - t_last_replan
+                
+                if dt < self.replan_dt:
+                    continue
+                
+                prev_policy = self.policy_buffer.readFromRT()
+                
+                if prev_policy is not None:
+                    initial_controls = prev_policy.get_ref_controls(curr_time)
+                else:
+                    initial_controls = None
+                    
+                if self.path_buffer.new_data_available:
+                    updated_path = self.path_buffer.readFromRT()
+                    self.planner.update_ref_path(updated_path)    
+                ilqr_dict = self.planner.plan(state[:-1], initial_controls)
+                
+                # Step 3
+                if ilqr_dict['status'] == 0:
+                    new_policy = Policy(ilqr_dict['trajectory'],
+                                        ilqr_dict['controls'],
+                                        ilqr_dict['K_closed_loop'],
+                                        curr_time,
+                                        self.planner.dt,
+                                        self.planner.T
+                                        )
+                    self.policy_buffer.writeFromNonRT(new_policy)
+                    self.trajectory_pub.publish(new_policy.to_msg())
+                    
+                    t_last_replan = curr_time
 
             '''
             Implement the receding horizon planning thread
@@ -446,34 +485,8 @@ class TrajectoryPlanner():
                     for example: self.trajectory_pub.publish(new_policy.to_msg())       
             '''
             '''
-            # take current time and subtract from last replan time
-            curr_time = rospy.get_rostime().to_sec()
-            t_since_replan = curr_time - t_last_replan
-            # Step 1
-            if self.plan_state_buffer.new_data_available and (t_since_replan > self.replan_dt) and self.planner_ready:
-                # Step 2
-                curr_state = self.plan_state_buffer.readFromRT()
-                prev_policy = self.policy_buffer.readFromRT()
-                if not prev_policy  None:
-                    curr_controls = prev_policy.get_ref_controls(t_last_replan)
-                if self.path_buffer.new_data_available:
-                    updated_path = self.path_buffer.readFromRT()
-                    reference_path = self.planner.update_ref_path(updated_path)
-                    ilqr_obj = ILQR()
-                    ilqr_dict = ilqr_obj.plan(curr_state,curr_controls)
-                    # Step 3
-                    if ilqr_dict['status'] == 0:
-                        new_policy = Policy(curr_state,
-                                            curr_controls,
-                                            ilqr_obj.backward_pass[0],
-                                            curr_time,
-                                            self.planner.dt,
-                                            curr_controls.shape[1]
-                                            )
-                        self.policy_buffer.writeFromNonRT(new_policy)
-                        self.trajectory_pub.publish(new_policy.to_msg())
+            
             '''
             ###############################
             #### END OF TODO #############
             ###############################
-            time.sleep(0.01)

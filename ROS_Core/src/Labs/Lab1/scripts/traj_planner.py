@@ -74,7 +74,10 @@ class TrajectoryPlanner():
         # Read ROS topic names to publish
         self.control_topic = get_ros_param('~control_topic', '/control/servo_control')
         self.traj_topic = get_ros_param('~traj_topic', '/Planning/Trajectory')
-        
+        # Read ROS static obstacles to subscribe
+        self.static_obs_topic = get_ros_param('~static_obs_topic', '/Obstacles/Static')
+
+
         # Read the simulation flag, 
         # if the flag is true, we are in simulation 
         # and no need to convert the throttle and steering angle to PWM
@@ -124,6 +127,9 @@ class TrajectoryPlanner():
         '''
         self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odometry_callback, queue_size=10)
         self.path_sub = rospy.Subscriber(self.path_topic, PathMsg, self.path_callback, queue_size=10)
+        # subscribe to topic created in step 1
+        self.static_obs_sub = rospy.Subscriber(self.static_obs_topic, MarkerArray, self.static_obs_callback,queue_size=10)
+
 
     def setup_service(self):
         '''

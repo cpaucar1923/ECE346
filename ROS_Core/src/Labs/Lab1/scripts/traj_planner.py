@@ -30,8 +30,13 @@ class TrajectoryPlanner():
     '''
     Main class for the Receding Horizon trajectory planner
     '''
-
+    
+    
     def __init__(self):
+
+        # Dictionary
+        self.static_obstacle_dict = {}
+        
         # Indicate if the planner is used to generate a new trajectory
         self.update_lock = threading.Lock()
         self.latency = 0.0
@@ -130,6 +135,12 @@ class TrajectoryPlanner():
         # subscribe to topic created in step 1
         self.static_obs_sub = rospy.Subscriber(self.static_obs_topic, MarkerArray, self.static_obs_callback,queue_size=10)
 
+    def static_obs_callback(self, marker_msg):
+        self.static_obstacle_dict.clear()
+        for obstacle in marker_msg.markers:
+            id, vertices = get_obstacle_vertices(obstacle)
+            self.static_obstacle_dict.update({id: vertices})
+           
 
     def setup_service(self):
         '''
@@ -435,7 +446,10 @@ class TrajectoryPlanner():
             ###############################
             #### TODO: Task 3 #############
             ###############################
-            
+            obstacles_list = []
+            obstacles_list = list(self.static_obstacle_dict.values())
+            self.planner.update_obstacles(obstacles_list)
+
             # take current time and subtract from last replan time
            
             # Step 1

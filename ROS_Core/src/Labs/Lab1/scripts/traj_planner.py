@@ -34,6 +34,10 @@ class TrajectoryPlanner():
     
     def __init__(self):
 
+        # Creating the client
+        rospy.wait_for_service('reset_srv')
+        
+
         # Dictionary
         self.static_obstacle_dict = {}
         
@@ -125,6 +129,9 @@ class TrajectoryPlanner():
 
         # Publisher for the control command
         self.control_pub = rospy.Publisher(self.control_topic, ServoMsg, queue_size=1)
+        
+        # publisher for the frs
+        self.frs_pub = rospy.Publisher("/vis/FRS", MarkerArray, queue_size = 1)
 
     def setup_subscriber(self):
         '''
@@ -133,7 +140,7 @@ class TrajectoryPlanner():
         self.pose_sub = rospy.Subscriber(self.odom_topic, Odometry, self.odometry_callback, queue_size=10)
         self.path_sub = rospy.Subscriber(self.path_topic, PathMsg, self.path_callback, queue_size=10)
         # subscribe to topic created in step 1
-        self.static_obs_sub = rospy.Subscriber(self.static_obs_topic, MarkerArray, self.static_obs_callback,queue_size=10)
+        self.static_obs_sub = rospy.Subscriber(self.static_obs_topic, MarkerArray, self.static_obs_callback, queue_size=10)
 
     def static_obs_callback(self, marker_msg):
         self.static_obstacle_dict.clear()
@@ -442,6 +449,8 @@ class TrajectoryPlanner():
         
         rospy.loginfo('Receding Horizon Planning thread started waiting for ROS service calls...')
         t_last_replan = 0
+        request = t_cur + np.arange(self.planner.T)*self.planner.dt 
+        response = Your_Service_Client(request)
         while not rospy.is_shutdown():
             ###############################
             #### TODO: Task 3 #############

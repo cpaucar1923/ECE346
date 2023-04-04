@@ -84,7 +84,7 @@ class DynObstacle():
         #   from the topic <'/obstacles/get_frs'>
 
         # Create a service server to calculate the FRS
-        ros_srv = rospy.Server('/obstacles/get_frs', GetFRS, self.srv_cb)
+        # ros_srv = rospy.Server('/obstacles/get_frs', GetFRS, self.srv_cb)
         #
         # 2. The service server should call <self.srv_cb> function, 
         #   which has been implemented for you.
@@ -95,13 +95,14 @@ class DynObstacle():
         # http://wiki.ros.org/ROS/Tutorials/WritingServiceClient%28python%29
         ###############################################
 
-    def dyn_srv_callback(config, level):
-        self.K_vx = K_vx
-        self.K_vy = K_vy
-        self.K_y =  K_vy
-        self.dx = dx
-        self.dy = dy
-        self.allow_lane_change = allow_lane_change
+    def dyn_srv_callback(self, config, level):
+        # print('config:', config)
+        self.K_vx = config['K_vx']
+        self.K_vy = config['K_vy']
+        self.K_y =  config['K_y']
+        self.dx = config['dx']
+        self.dy = config['dy']
+        self.allow_lane_change = config['allow_lane_change']
         '''
         rospy.loginfo("""Reconfigure Request: {K_vx}, {K_vy},\
             {K_y}, {dx}, {dy}, {allow_lane_change}""".format(**config))
@@ -132,8 +133,9 @@ if __name__ == '__main__':
     ##########################################
     #TODO: Initialize a ROS Node with a DynObstacle object
     ##########################################
-    dyn_srv_name = Server(configConfig, dyn_srv_callback)
-    ros_srv_name = rospy.Server(GetFRS, srv_cb)
-
-    
-    pass
+    # dyn_srv_name = Server(configConfig, dyn_srv_callback)
+    # ros_srv_name = rospy.Server(GetFRS, srv_cb)
+    # rospy.init_node("dynamic_tutorials", anonymous = False)
+    rospy.init_node("dynamic_obstacle_node")
+    static_obs = DynObstacle()
+    rospy.spin()

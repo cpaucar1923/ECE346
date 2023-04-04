@@ -454,14 +454,14 @@ class TrajectoryPlanner():
             #### TODO: Task 3 #############
             ###############################
             # Calling Service Client
-            request = t_last_replan + np.arange(self.planner.T)*self.planner.dt 
+            request = rospy.get_time() + np.arange(self.planner.T)*self.planner.dt 
             response = reset_srv_client(request)
 
             obstacles_list = []
             obstacles_list = list(self.static_obstacle_dict.values())
 
             frs_obstacles_list = frs_to_obstacle(response)
-            obstacles_list.extend(frs_obstacles_list)
+            frs_obstacles_list.extend(obstacles_list)
 
             frs_marker_arr = frs_to_msg(response)
             self.frs_pub.publish(frs_marker_arr)

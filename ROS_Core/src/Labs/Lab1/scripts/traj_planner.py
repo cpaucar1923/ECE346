@@ -34,10 +34,7 @@ class TrajectoryPlanner():
     
     def __init__(self):
 
-        # Creating the client
-        rospy.wait_for_service('reset_srv')
-        reset_srv_client = rospy.ServiceProxy('reset_srv', GetFRS)
-
+    
         # Dictionary
         self.static_obstacle_dict = {}
         
@@ -59,13 +56,21 @@ class TrajectoryPlanner():
 
         self.setup_service()
 
+        # added
+        self.setup_client()
+
         # start planning and control thread
         threading.Thread(target=self.control_thread).start()
         if not self.receding_horizon:
             threading.Thread(target=self.policy_planning_thread).start()
         else:
             threading.Thread(target=self.receding_horizon_planning_thread).start()
+    def setup_client(self):
+        # Creating the client
+        rospy.wait_for_service('reset_srv')
+        self.reset_srv_client = rospy.ServiceProxy('reset_srv', GetFRS)
     
+   
     def read_parameters(self):
         '''
         This function reads the parameters from the parameter server
@@ -455,7 +460,7 @@ class TrajectoryPlanner():
             ###############################
             # Calling Service Client
             request = rospy.get_time() + np.arange(self.planner.T)*self.planner.dt 
-            response = reset_srv_client(request)
+            response = self.setup_client(request)
 
             obstacles_list = []
             obstacles_list = list(self.static_obstacle_dict.values())

@@ -54,7 +54,7 @@ class DynObstacle():
         ############## TODO ###########################
         # 1. Create a Dynamic Reconfigure Server to get <configConfig> message
         #
-        
+       
         # 2. Inside the callback function, extract the following parameters
         #       K_vx, K_vy, K_y, dx, dy, allow_lane_change
         #       and save them to the class variables
@@ -75,12 +75,16 @@ class DynObstacle():
 
         
         # Create a service server to calculate the FRS
+        # ? Service ?
         reset_srv = rospy.Service('/obstacles/get_frs', GetFRS, self.srv_cb)
 
         ###############################################
         ############## TODO ###########################
         # 1. Create a ROS Service Server to get <GetFRS> service 
         #   from the topic <'/obstacles/get_frs'>
+
+        # Create a service server to calculate the FRS
+        ros_srv = rospy.Server('/obstacles/get_frs', GetFRS, self.srv_cb)
         #
         # 2. The service server should call <self.srv_cb> function, 
         #   which has been implemented for you.
@@ -91,6 +95,19 @@ class DynObstacle():
         # http://wiki.ros.org/ROS/Tutorials/WritingServiceClient%28python%29
         ###############################################
 
+    def dyn_srv_callback(config, level):
+        self.K_vx = K_vx
+        self.K_vy = K_vy
+        self.K_y =  K_vy
+        self.dx = dx
+        self.dy = dy
+        self.allow_lane_change = allow_lane_change
+        '''
+        rospy.loginfo("""Reconfigure Request: {K_vx}, {K_vy},\
+            {K_y}, {dx}, {dy}, {allow_lane_change}""".format(**config))
+        return config
+        '''
+            
     def dyn_obs_callback(self, odomarr_msg):
         # Inside the callback function, save <OdometryArray.odom_list> element
         #       (which is the list of dynamic obstacles' poses)
@@ -111,8 +128,12 @@ class DynObstacle():
         return respond
     
 if __name__ == '__main__':
+
     ##########################################
     #TODO: Initialize a ROS Node with a DynObstacle object
     ##########################################
+    dyn_srv_name = Server(configConfig, dyn_srv_callback)
+    ros_srv_name = rospy.Server(GetFRS, srv_cb)
+
     
     pass

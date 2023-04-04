@@ -36,7 +36,7 @@ class TrajectoryPlanner():
 
         # Creating the client
         rospy.wait_for_service('reset_srv')
-        
+        reset_srv_client = rospy.ServiceProxy('reset_srv', GetFRS)
 
         # Dictionary
         self.static_obstacle_dict = {}
@@ -449,14 +449,24 @@ class TrajectoryPlanner():
         
         rospy.loginfo('Receding Horizon Planning thread started waiting for ROS service calls...')
         t_last_replan = 0
-        request = t_cur + np.arange(self.planner.T)*self.planner.dt 
-        response = Your_Service_Client(request)
         while not rospy.is_shutdown():
             ###############################
             #### TODO: Task 3 #############
             ###############################
+            # Calling Service Client
+            request = t_last_replan + np.arange(self.planner.T)*self.planner.dt 
+            response = reset_srv_client(request)
+
             obstacles_list = []
             obstacles_list = list(self.static_obstacle_dict.values())
+
+            frs_obstacles_list = frs_to_obstacle(response)
+            obstacles_list.extend(frs_obstacles_list)
+
+            frs_marker_arr = frs_to_msg(response)
+            self.frs_pub.publish(frs_marker_arr)
+
+
             self.planner.update_obstacles(obstacles_list)
 
             # take current time and subtract from last replan time

@@ -75,7 +75,6 @@ class DynObstacle():
 
         
         # Create a service server to calculate the FRS
-        # ? Service ?
         reset_srv = rospy.Service('/obstacles/get_frs', GetFRS, self.srv_cb)
 
         ###############################################

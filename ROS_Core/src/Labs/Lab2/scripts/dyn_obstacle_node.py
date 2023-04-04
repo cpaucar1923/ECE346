@@ -38,10 +38,12 @@ class DynObstacle():
         # 1. Create a subscriber to get <OdometryArray> message
         #    from the topic <self.dyn_obs_topic>
         #
+        self.dyn_obs_sub = rospy.Subscriber(self.dyn_obs_topic, OdometryArray, self.dyn_obs_callback, queue_size=10)
         # 2. Inside the callback function, save <OdometryArray.odom_list> element
         #       (which is the list of dynamic obstacles' poses)
         #       to the class variable <self.dyn_obstacles>
-        #
+        #       DONE IN THE FUNCTION BELOW
+
         # Hint: You can find <OdometryArray> message 
         #    <ROS_Core/src/Utility/Custom_Msgs/msg/OdometryArray.msg>
         ###############################################
@@ -52,6 +54,7 @@ class DynObstacle():
         ############## TODO ###########################
         # 1. Create a Dynamic Reconfigure Server to get <configConfig> message
         #
+        
         # 2. Inside the callback function, extract the following parameters
         #       K_vx, K_vy, K_y, dx, dy, allow_lane_change
         #       and save them to the class variables
@@ -87,6 +90,13 @@ class DynObstacle():
         # Here is the tutorial for dynamic reconfigure
         # http://wiki.ros.org/ROS/Tutorials/WritingServiceClient%28python%29
         ###############################################
+
+    def dyn_obs_callback(self, odomarr_msg):
+        # Inside the callback function, save <OdometryArray.odom_list> element
+        #       (which is the list of dynamic obstacles' poses)
+        #       to the class variable <self.dyn_obstacles>
+        curr_odom_list = odomarr_msg.odom_list
+        self.dyn_obstacles = curr_odom_list
 
     def srv_cb(self, req):
         '''
